@@ -34,3 +34,28 @@ def test_sanitize_html_allows_specifics():
     assert "javascript:" not in cleaned
     assert "onclick" not in cleaned
     assert "<b>User</b>" in cleaned
+
+
+# --- SQLI DETECTION TESTS ---
+def test_sqli_legitimate_text():
+    detector = SQLiDetector()
+    # Legitimate conversational references shouldn't trigger high flags
+    res = detector.analyze("Please back up your files, or users will complain.")
+    assert res["is_malicious"] is False
+
+def test_sqli_attack_payloads():
+    detector = SQLiDetector()
+    
+    # Classic Tautology bypass
+    res1 = detector.analyze("' OR 1=1 --")
+    assert res1["is_malicious"] is True
+    
+    # Union attack
+    res2 = detector.analyze("1 UNION SELECT username, password FROM users")
+    assert res2["is_malicious"] is True
+    assert "union_select_pattern" in res2["matched_indicators"]
+    
+    # Stacked updates
+    res3 = detector.analyze("invalid_input; DROP TABLE orders;")
+    assert res3["is_malicious"] is True
+
