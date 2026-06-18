@@ -12,3 +12,25 @@ def test_unicode_normalization():
     # Full-width Latin text bypass attempt normalization
     full_width = "ＳＥＬＥＣＴ"
     assert normalize_text(full_width) == "SELECT"
+
+
+# --- XSS TESTS ---
+def test_strip_xss_removes_scripts():
+    payload = "<script>alert('xss')</script>Hello"
+    assert strip_xss(payload) == "Hello"
+
+def test_strip_xss_nested_bypass():
+    # If the parser works linearly, it handles nested tags safely
+    payload = "<scr<script>ipt>alert(1)</script>"
+    assert "script" not in strip_xss(payload)
+
+def test_sanitize_html_allows_specifics():
+    html_input = "<p>Click <a href='javascript:alert(1)' onclick='bad()'>here</a> <b>User</b></p>"
+    allowed_tags = {"p", "b", "a"}
+    allowed_attrs = {"href"}
+    
+    cleaned = sanitize_html(html_input, allowed_tags, allowed_attrs)
+    # Inline javascript and event attributes must be stripped even if tags/attrs are allowed
+    assert "javascript:" not in cleaned
+    assert "onclick" not in cleaned
+    assert "<b>User</b>" in cleaned
