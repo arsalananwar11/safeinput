@@ -15,7 +15,7 @@ A robust, lightweight, and high-reliability Python utility package for input val
 - **Null Byte Cleansing (OWASP ASVS 5.1.2):** Eliminates file-system poisoning and database truncation risks.
 - **Unicode Normalization (OWASP ASVS 5.1.4):** Automatically converts full-width and compatibility characters (`NFKC` form) to standard representation to block lookalike/homoglyph bypass tricks.
 - **Contextual HTML/XSS Sanitizer (OWASP XSS Guidelines):** Uses standard token streams (`html.parser`) rather than fragile regular expressions to safely allow specific markup while filtering out dangerous attributes and protocols (`javascript:`, `onclick`, etc.).
-- **Heuristic SQLi Detection:** A non-destructive, multi-signature evaluation engine that computes a risk score based on structural queries and tautologies instead of blindly stripping text.
+- **Heuristic SQLi Detection & Redaction:** A non-destructive, multi-signature evaluation engine that computes a risk score based on structural queries and tautologies, offering surgical redaction capabilities.
 
 ## Installation
 
@@ -57,7 +57,7 @@ To maximize security while maintaining high usability for legitimate user text, 
        │             │
        ▼             ▼
  [Clean Text/  [Risk Score
-    HTML]       & Indicators]
+    HTML]       & Surgical Redaction]
 ```
 
 
@@ -114,14 +114,21 @@ Instead of changing the input text (which breaks common human language syntax), 
     legit_text = "I need to select a plan and update my account billing profile."
     result = detector.analyze(legit_text)
     print(result["is_malicious"])  # Output: False
-    print(result["risk_score"])     # Output: 0.0
+    print(result["risk_score"])          # Output: 1
+    print(result["matched_indicators"])  # Output: ['union_select_pattern']
 
     # Active exploit pattern
-    exploit_text = "admin' OR '1'='1' --"
+    exploit_text = "1 UNION SELECT username, password FROM users"
     result = detector.analyze(exploit_text)
     print(result["is_malicious"])       # Output: True
-    print(result["risk_score"])          # Output: 0.70 (Crosses threshold metrics due to tautology + comment)
+    print(result["risk_score"])          # Output: 1
     print(result["matched_indicators"])  # Output: ['boolean_tautology', 'sql_comment_syntax']
+
+    # Surgical Redaction (Removes only offending structural patterns)
+    mixed_text = "Hello admin' OR '1'='1' -- please drop the tables; DROP TABLE users"
+    clean_text = detector.sanitize(mixed_text)
+    print(clean_text)
+    # Output: "Hello admin[REDACTED] please drop the tables[REDACTED]"
     ```
 
 ### Running Project Tests
