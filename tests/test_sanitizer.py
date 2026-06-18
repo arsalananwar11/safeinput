@@ -59,3 +59,17 @@ def test_sqli_attack_payloads():
     res3 = detector.analyze("invalid_input; DROP TABLE orders;")
     assert res3["is_malicious"] is True
 
+
+def test_sqli_legitimate_comparison_operators():
+    detector = SQLiDetector()
+    # Ensure standard comparison operators in normal text are not treated as malicious
+    expressions = [
+        "if x > 5 and y < 10:",
+        "The price is >= $50 but <= $100",
+        "Make sure total != 0",
+        "Score = 100 points"
+    ]
+    for expr in expressions:
+        res = detector.analyze(expr)
+        assert res["is_malicious"] is False
+        assert res["risk_score"] < detector.threshold
